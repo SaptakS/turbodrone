@@ -21,7 +21,7 @@ import sys
 import socket
 # import cv2
 import time # Import time for delays
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QWidget, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt, QByteArray, QTimer
 
@@ -217,40 +217,48 @@ class RTSPViewerApp(QMainWindow):
         self.cam=0
 
         # Control buttons
+        control1 = QHBoxLayout()
         self.up_button = QPushButton("UP")
         self.up_button.setFixedSize(100, 40)
         self.up_button.clicked.connect(self.on_up_button_clicked)
-        self.layout.addWidget(self.up_button, alignment=Qt.AlignCenter)
+        control1.addWidget(self.up_button, alignment=Qt.AlignCenter)
 
         self.down_button = QPushButton("DOWN")
         self.down_button.setFixedSize(100, 40)
         self.down_button.clicked.connect(self.on_down_button_clicked)
-        self.layout.addWidget(self.down_button, alignment=Qt.AlignCenter)
+        control1.addWidget(self.down_button, alignment=Qt.AlignCenter)
 
         self.stop_button = QPushButton("LAND")
         self.stop_button.setFixedSize(100, 40)
         self.stop_button.clicked.connect(self.on_land_button_clicked)
-        self.layout.addWidget(self.stop_button, alignment=Qt.AlignCenter)
+        control1.addWidget(self.stop_button, alignment=Qt.AlignCenter)
 
+        control2 = QVBoxLayout()
         self.fwd_button = QPushButton("FWD")
         self.fwd_button.setFixedSize(100, 40)
         self.fwd_button.clicked.connect(self.on_fwd_button_clicked)
-        self.layout.addWidget(self.fwd_button, alignment=Qt.AlignCenter)
+        control2.addWidget(self.fwd_button, alignment=Qt.AlignCenter)
 
-        self.back_button = QPushButton("BACK")
-        self.back_button.setFixedSize(100, 40)
-        self.back_button.clicked.connect(self.on_back_button_clicked)
-        self.layout.addWidget(self.back_button, alignment=Qt.AlignCenter)
-
+        controlLR = QHBoxLayout()
         self.left_button = QPushButton("LEFT")
         self.left_button.setFixedSize(100, 40)
         self.left_button.clicked.connect(self.on_left_button_clicked)
-        self.layout.addWidget(self.left_button, alignment=Qt.AlignCenter)
+        controlLR.addWidget(self.left_button, alignment=Qt.AlignCenter)
 
         self.right_button = QPushButton("RIGHT")
         self.right_button.setFixedSize(100, 40)
         self.right_button.clicked.connect(self.on_right_button_clicked)
-        self.layout.addWidget(self.right_button, alignment=Qt.AlignCenter)
+        controlLR.addWidget(self.right_button, alignment=Qt.AlignCenter)
+
+        control2.addLayout(controlLR)
+
+        self.back_button = QPushButton("BACK")
+        self.back_button.setFixedSize(100, 40)
+        self.back_button.clicked.connect(self.on_back_button_clicked)
+        control2.addWidget(self.back_button, alignment=Qt.AlignCenter)
+
+        self.layout.addLayout(control1)
+        self.layout.addLayout(control2)
 
         # UDP response display label
         self.udp_response_label = QLabel("UDP Response: None", self)
@@ -574,17 +582,19 @@ class RTSPViewerApp(QMainWindow):
 
     def on_up_button_clicked(self):
         """Handler for the UP button click."""
-        self.send_udp_command(UDP_UP_COMMAND)
-        # Give the device a moment to switch cameras and stabilize the stream
-        time.sleep(0.5) # Small delay after sending command
-        self.video_thread.reinitialize_stream() # Trigger full stream re-initialization
+        # self.send_udp_command(UDP_UP_COMMAND)
+        # # Give the device a moment to switch cameras and stabilize the stream
+        # time.sleep(0.5) # Small delay after sending command
+        # self.video_thread.reinitialize_stream() # Trigger full stream re-initialization
+        self.go_up()
 
     def on_down_button_clicked(self):
         """Handler for the DOWN button click."""
-        self.send_udp_command(UDP_DOWN_COMMAND)
-        # Give the device a moment to switch cameras and stabilize the stream
-        time.sleep(0.5) # Small delay after sending command
-        self.video_thread.reinitialize_stream() # Trigger full stream re-initialization
+        # self.send_udp_command(UDP_DOWN_COMMAND)
+        # # Give the device a moment to switch cameras and stabilize the stream
+        # time.sleep(0.5) # Small delay after sending command
+        # self.video_thread.reinitialize_stream() # Trigger full stream re-initialization
+        self.go_down()
 
     def on_land_button_clicked(self):
         self.one_touch()
