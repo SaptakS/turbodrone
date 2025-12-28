@@ -28,10 +28,6 @@ from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt, QByteArray, QTimer
 # --- Constants ---
 RTSP_URL = "rtsp://192.168.1.1:7070/webcam"
 
-UDP_HB_IP = "192.168.169.1" # This is the target IP for heartbeat
-UDP_HB_PORT = 8800 # Port for sending hearbeat
-HB_COMMAND = ''
-
 UDP_IP = "192.168.1.1" # This is the target IP for sending commands
 UDP_SEND_PORT = 7099 # Port for sending commands
 UDP_LISTEN_PORT = 7099 # Port for listening to responses (assuming same port for simplicity, adjust if different)
@@ -39,6 +35,7 @@ UDP_UP_COMMAND = b'\x06\x01'  # Byte sequence for UP command
 UDP_DOWN_COMMAND = b'\x06\x02' # Byte sequence for DOWN command
 UDP_BUFFER_SIZE = 1024 # Buffer size for UDP receive
 STREAM_REINITIALIZE_DELAY_SEC = 2 # Delay before attempting to re-open stream after disruption
+ORIG_BASE_BYTES = bytearray(b'\x66\x14\x80\x80\x80\x80\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x99')
 
 # --- Video Stream Thread ---
 class VideoStreamThread(QThread):
@@ -211,7 +208,7 @@ class RTSPViewerApp(QMainWindow):
 
         # Video display label
         self.image_label = QLabel(self)
-        self.image_label.setFixedSize(640, 480) # Fixed size for video display
+        self.image_label.setFixedSize(640, 280) # Fixed size for video display
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setStyleSheet("background-color: black; border: 1px solid gray;")
         self.layout.addWidget(self.image_label, alignment=Qt.AlignCenter)
@@ -230,10 +227,25 @@ class RTSPViewerApp(QMainWindow):
         self.down_button.clicked.connect(self.on_down_button_clicked)
         self.layout.addWidget(self.down_button, alignment=Qt.AlignCenter)
 
-        self.stop_button = QPushButton("STOP")
+        self.stop_button = QPushButton("LAND")
         self.stop_button.setFixedSize(100, 40)
-        self.stop_button.clicked.connect(self.on_stop_button_clicked)
+        self.stop_button.clicked.connect(self.on_land_button_clicked)
         self.layout.addWidget(self.stop_button, alignment=Qt.AlignCenter)
+
+        self.fwd_button = QPushButton("FWD")
+        self.fwd_button.setFixedSize(100, 40)
+        self.fwd_button.clicked.connect(self.on_fwd_button_clicked)
+        self.layout.addWidget(self.fwd_button, alignment=Qt.AlignCenter)
+
+        self.left_button = QPushButton("LEFT")
+        self.left_button.setFixedSize(100, 40)
+        self.left_button.clicked.connect(self.on_left_button_clicked)
+        self.layout.addWidget(self.left_button, alignment=Qt.AlignCenter)
+
+        self.right_button = QPushButton("RIGHT")
+        self.right_button.setFixedSize(100, 40)
+        self.right_button.clicked.connect(self.on_right_button_clicked)
+        self.layout.addWidget(self.right_button, alignment=Qt.AlignCenter)
 
         # UDP response display label
         self.udp_response_label = QLabel("UDP Response: None", self)
@@ -278,7 +290,7 @@ class RTSPViewerApp(QMainWindow):
         print(self.basebytes)
         print(len(self.basebytes))
         # 03:66:14:80:80:80:80:00:02:00:00:00:00:00:00:00:00:00:00:02:99
-        self.take_off()
+        self.one_touch()
 
     def simple_send(self):
         self.send_udp_command(bytes(bytearray(b'\x03') + self.basebytes))
@@ -286,22 +298,67 @@ class RTSPViewerApp(QMainWindow):
             self.send_udp_command(b'\x01\x01')
             self.last_heartbeat = time.time()
 
-    def take_off(self):
+    def one_touch(self):
+        # 03:66:14:80:80:80:80:01:02:00:00:00:00:00:00:00:00:00:00:03:99
+        self.reset()
         self.basebytes[6] = 1
         self.basebytes[-2] = 3
         print("taking off")
         print(self.basebytes)
-        self.send_udp_command(bytes(bytearray(b'\x03') + self.basebytes))
+        for i in range(10):
+            self.send_udp_command(bytes(bytearray(b'\x03') + self.basebytes))
+            time.sleep(0.01)
+        self.reset()
 
     def stop(self):
+        # 03:66:14:80:80:80:80:02:02:00:00:00:00:00:00:00:00:00:00:00:99
+        self.reset()
         self.basebytes[6] = 2
         self.basebytes[-2] = 0
         print("landing")
         print(self.basebytes)
         self.send_udp_command(bytes(bytearray(b'\x03') + self.basebytes))
 
-    def on_stop_button_clicked(self):
-        self.stop()
+    def go_forward(self):
+        # 03:66:14:87:ac:80:80:00:02:00:00:00:00:00:00:00:00:00:00:29:99
+        print("Drone go fwd")
+        self.reset()
+        self.basebytes[2] = 0x87
+        self.basebytes[3] = 0xac
+        self.basebytes[-2] = 0x29
+        print(self.basebytes)
+        for i in range(10):
+            self.send_udp_command(bytes(bytearray(b'\x03') + self.basebytes))
+            time.sleep(0.01)
+        self.reset()
+
+    def go_left(self):
+        print("Drone go left")
+        self.reset()
+        self.basebytes[2] = 0xa3
+        self.basebytes[3] = 0x81
+        self.basebytes[-2] = 0x20
+        print(self.basebytes)
+        for i in range(10):
+            self.send_udp_command(bytes(bytearray(b'\x03') + self.basebytes))
+            time.sleep(0.01)
+        self.reset()
+
+    def go_right(self):
+        print("Drone go right")
+        self.reset()
+        self.basebytes[2] = 0x96
+        self.basebytes[3] = 0x7e
+        self.basebytes[-2] = 0xea
+        print(self.basebytes)
+        for i in range(10):
+            self.send_udp_command(bytes(bytearray(b'\x03') + self.basebytes))
+            time.sleep(0.01)
+        self.reset()
+
+    def reset(self):
+        print("resetting.....")
+        self.basebytes = bytearray(b'\x66\x14\x80\x80\x80\x80\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x99')
 
     def send(self):
         if self.flip:
@@ -342,60 +399,58 @@ class RTSPViewerApp(QMainWindow):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Up: #Forward (pitch down)
-            if self.basebytes[2]<200:
-                self.basebytes[2]+=self.accel
+            self.go_forward()
+            # if self.basebytes[2]<200:
+            #     self.basebytes[2]+=self.accel
             event.accept()  # Crucial: tell PyQt we handled this event
         elif event.key() == Qt.Key_Down: #Back (pitch up)
             if self.basebytes[2]>50:
                 self.basebytes[2]-=self.accel
             event.accept()  # Crucial: tell PyQt we handled this event
         elif event.key() == Qt.Key_Left: #Roll left
-            if self.basebytes[1]>50:
-                self.basebytes[1]-=self.accel
+            self.go_left()
             event.accept()  # Crucial: tell PyQt we handled this event
         elif event.key() == Qt.Key_Right: #Roll right
-            if self.basebytes[1]<200:
-                self.basebytes[1]+=self.accel
+            self.go_right()
             event.accept()  # Crucial: tell PyQt we handled this event
-        elif event.key() == Qt.Key_W:
-            if self.basebytes[3]<200:
-                self.basebytes[3]+=self.accel
-            event.accept()  # Crucial: tell PyQt we handled this event
-        elif event.key() == Qt.Key_S:
-            if self.basebytes[3]>50:
-                self.basebytes[3]-=self.accel
-            event.accept()  # Crucial: tell PyQt we handled this event
-        elif event.key() == Qt.Key_D:
-            if self.basebytes[4]<200:
-                self.basebytes[4]+=self.accel
-            event.accept()  # Crucial: tell PyQt we handled this event
-        elif event.key() == Qt.Key_A:
-            if self.basebytes[4]>50:
-                self.basebytes[4]-=self.accel
-            event.accept()  # Crucial: tell PyQt we handled this event
+        # elif event.key() == Qt.Key_W:
+        #     if self.basebytes[3]<200:
+        #         self.basebytes[3]+=self.accel
+        #     event.accept()  # Crucial: tell PyQt we handled this event
+        # elif event.key() == Qt.Key_S:
+        #     if self.basebytes[3]>50:
+        #         self.basebytes[3]-=self.accel
+        #     event.accept()  # Crucial: tell PyQt we handled this event
+        # elif event.key() == Qt.Key_D:
+        #     if self.basebytes[4]<200:
+        #         self.basebytes[4]+=self.accel
+        #     event.accept()  # Crucial: tell PyQt we handled this event
+        # elif event.key() == Qt.Key_A:
+        #     if self.basebytes[4]>50:
+        #         self.basebytes[4]-=self.accel
+        #     event.accept()  # Crucial: tell PyQt we handled this event
         elif event.key() == Qt.Key_Z: #Takeoff
             print("Pressed Take OFF")
-            self.basebytes[5] = 1
-            print(self.basebytes)
-            event.accept()  # Crucial: tell PyQt we handled this event
+            self.one_touch()
+            event.accept()
         elif event.key() == Qt.Key_X: #Land
-            self.basebytes[5] = 2
+            self.one_touch()
             event.accept()  # Crucial: tell PyQt we handled this event
-        elif event.key() == Qt.Key_C: #Calibrate
-            self.basebytes[5] = 128 
-            event.accept()  # Crucial: tell PyQt we handled this event
-        elif event.key() == Qt.Key_F: #Flip 360
-            self.flip = True
-            event.accept()  # Crucial: tell PyQt we handled this event
-        elif event.key() == Qt.Key_H: #Headless
-            self.headless = not self.headless
-            event.accept()  # Crucial: tell PyQt we handled this event
-        elif event.key() == Qt.Key_1: #cam 1
-            self.cam=1
-            event.accept()  # Crucial: tell PyQt we handled this event
-        elif event.key() == Qt.Key_2: #cam 2
-            self.cam=2
-            event.accept()  # Crucial: tell PyQt we handled this event
+        # elif event.key() == Qt.Key_C: #Calibrate
+        #     self.basebytes[5] = 128 
+        #     event.accept()  # Crucial: tell PyQt we handled this event
+        # elif event.key() == Qt.Key_F: #Flip 360
+        #     self.flip = True
+        #     event.accept()  # Crucial: tell PyQt we handled this event
+        # elif event.key() == Qt.Key_H: #Headless
+        #     self.headless = not self.headless
+        #     event.accept()  # Crucial: tell PyQt we handled this event
+        # elif event.key() == Qt.Key_1: #cam 1
+        #     self.cam=1
+        #     event.accept()  # Crucial: tell PyQt we handled this event
+        # elif event.key() == Qt.Key_2: #cam 2
+        #     self.cam=2
+        #     event.accept()  # Crucial: tell PyQt we handled this event
         else:
             # For other keys, let the default behavior happen
             print(event.key())
@@ -429,13 +484,6 @@ class RTSPViewerApp(QMainWindow):
 
     def send_udp_command(self, command):
         """Sends a UDP command  and heartbeat to the specified IP and port."""
-        # try:
-        #     self.sock.sendto(HB_COMMAND, (UDP_HB_IP, UDP_HB_PORT))
-        #     #print(f"Sent UDP command: {command.hex()} to {UDP_IP}:{UDP_SEND_PORT}")
-        # except socket.error as e:
-        #     #QMessageBox.warning(self, "Network Error", f"Failed to send UDP command: {e}")
-        #     print(f"UDP send error: {e}")
-
         try:
             self.sock.sendto(command, (UDP_IP, UDP_SEND_PORT))
             print(f"Sent UDP command: {command.hex()} recvd {self.sock.recv(11)}")
@@ -456,6 +504,18 @@ class RTSPViewerApp(QMainWindow):
         # Give the device a moment to switch cameras and stabilize the stream
         time.sleep(0.5) # Small delay after sending command
         self.video_thread.reinitialize_stream() # Trigger full stream re-initialization
+
+    def on_land_button_clicked(self):
+        self.one_touch()
+
+    def on_fwd_button_clicked(self):
+        self.go_forward()
+
+    def on_left_button_clicked(self):
+        self.go_left()
+
+    def on_right_button_clicked(self):
+        self.go_right()
 
     def closeEvent(self, event):
         """Ensures all threads are stopped when the application closes."""
