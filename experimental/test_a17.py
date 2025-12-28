@@ -237,6 +237,11 @@ class RTSPViewerApp(QMainWindow):
         self.fwd_button.clicked.connect(self.on_fwd_button_clicked)
         self.layout.addWidget(self.fwd_button, alignment=Qt.AlignCenter)
 
+        self.back_button = QPushButton("BACK")
+        self.back_button.setFixedSize(100, 40)
+        self.back_button.clicked.connect(self.on_back_button_clicked)
+        self.layout.addWidget(self.back_button, alignment=Qt.AlignCenter)
+
         self.left_button = QPushButton("LEFT")
         self.left_button.setFixedSize(100, 40)
         self.left_button.clicked.connect(self.on_left_button_clicked)
@@ -331,9 +336,24 @@ class RTSPViewerApp(QMainWindow):
             self.send_udp_command(bytes(bytearray(b'\x03') + self.basebytes))
             time.sleep(0.01)
         self.reset()
+    
+    def go_back(self):
+        # 03:66:14:86:53:80:80:00:02:00:00:00:00:00:00:00:00:00:00:d7:99
+        print("Drone go back")
+        self.reset()
+        self.basebytes[2] = 0x86
+        self.basebytes[3] = 0x53
+        self.basebytes[-2] = 0xd7
+        print(self.basebytes)
+        for i in range(10):
+            self.send_udp_command(bytes(bytearray(b'\x03') + self.basebytes))
+            time.sleep(0.01)
+        self.reset()
 
-    def go_left(self):
-        print("Drone go left")
+
+    def go_right(self):
+        # 03:66:14:a3:81:80:80:00:02:00:00:00:00:00:00:00:00:00:00:20:99
+        print("Drone go right")
         self.reset()
         self.basebytes[2] = 0xa3
         self.basebytes[3] = 0x81
@@ -344,12 +364,62 @@ class RTSPViewerApp(QMainWindow):
             time.sleep(0.01)
         self.reset()
 
-    def go_right(self):
-        print("Drone go right")
+    def go_left(self):
+        # 03:66:14:53:82:80:80:00:02:00:00:00:00:00:00:00:00:00:00:d3:99
+        print("Drone go left")
         self.reset()
-        self.basebytes[2] = 0x96
-        self.basebytes[3] = 0x7e
-        self.basebytes[-2] = 0xea
+        self.basebytes[2] = 0x53
+        self.basebytes[3] = 0x82
+        self.basebytes[-2] = 0xd3
+        print(self.basebytes)
+        for i in range(10):
+            self.send_udp_command(bytes(bytearray(b'\x03') + self.basebytes))
+            time.sleep(0.01)
+        self.reset()
+
+    def go_up(self):
+        # 03:66:14:80:80:e2:80:00:02:00:00:00:00:00:00:00:00:00:00:60:99
+        print("Drone go up")
+        self.reset()
+        self.basebytes[4] = 0xe2
+        self.basebytes[-2] = 0x60
+        print(self.basebytes)
+        for i in range(10):
+            self.send_udp_command(bytes(bytearray(b'\x03') + self.basebytes))
+            time.sleep(0.01)
+        self.reset()
+
+    def go_down(self):
+        # 03:66:14:80:80:04:80:00:02:00:00:00:00:00:00:00:00:00:00:86:99
+        print("Drone go down")
+        self.reset()
+        self.basebytes[4] = 0x04
+        self.basebytes[-2] = 0x86
+        print(self.basebytes)
+        for i in range(10):
+            self.send_udp_command(bytes(bytearray(b'\x03') + self.basebytes))
+            time.sleep(0.01)
+        self.reset()
+
+    def yaw_left(self):
+        # 03:66:14:80:80:7c:80:00:02:00:00:00:00:00:00:00:00:00:00:66:99
+        print("Drone rotate left..")
+        self.reset()
+        self.basebytes[4] = 0x7c
+        self.basebytes[-2] = 0x66
+        print(self.basebytes)
+        for i in range(10):
+            self.send_udp_command(bytes(bytearray(b'\x03') + self.basebytes))
+            time.sleep(0.01)
+        self.reset()
+
+    def yaw_right(self):
+        # 03:66:14:80:80:86:d6:00:02:00:00:00:00:00:00:00:00:00:00:52:99
+        print("Drone rotate right..")
+        self.reset()
+        self.basebytes[4] = 0x86
+        self.basebytes[5] = 0xd6
+        self.basebytes[-2] = 0x52
         print(self.basebytes)
         for i in range(10):
             self.send_udp_command(bytes(bytearray(b'\x03') + self.basebytes))
@@ -359,6 +429,17 @@ class RTSPViewerApp(QMainWindow):
     def reset(self):
         print("resetting.....")
         self.basebytes = bytearray(b'\x66\x14\x80\x80\x80\x80\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x99')
+
+    def pattern(self):
+        print("Pattern executing...")
+        #go forward
+        self.go_forward()
+        time.sleep(1)
+        self.go_back()
+        time.sleep(1)
+        self.go_left()
+        time.sleep(1)
+        self.go_right()
 
     def send(self):
         if self.flip:
@@ -397,64 +478,64 @@ class RTSPViewerApp(QMainWindow):
         bs[6]=s
         return bs
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Up: #Forward (pitch down)
-            self.go_forward()
-            # if self.basebytes[2]<200:
-            #     self.basebytes[2]+=self.accel
-            event.accept()  # Crucial: tell PyQt we handled this event
-        elif event.key() == Qt.Key_Down: #Back (pitch up)
-            if self.basebytes[2]>50:
-                self.basebytes[2]-=self.accel
-            event.accept()  # Crucial: tell PyQt we handled this event
-        elif event.key() == Qt.Key_Left: #Roll left
-            self.go_left()
-            event.accept()  # Crucial: tell PyQt we handled this event
-        elif event.key() == Qt.Key_Right: #Roll right
-            self.go_right()
-            event.accept()  # Crucial: tell PyQt we handled this event
-        # elif event.key() == Qt.Key_W:
-        #     if self.basebytes[3]<200:
-        #         self.basebytes[3]+=self.accel
+    # def keyPressEvent(self, event):
+        # if event.key() == Qt.Key_Up: #Forward (pitch down)
+        #     self.go_forward()
+        #     # if self.basebytes[2]<200:
+        #     #     self.basebytes[2]+=self.accel
         #     event.accept()  # Crucial: tell PyQt we handled this event
-        # elif event.key() == Qt.Key_S:
-        #     if self.basebytes[3]>50:
-        #         self.basebytes[3]-=self.accel
+        # elif event.key() == Qt.Key_Down: #Back (pitch up)
+        #     if self.basebytes[2]>50:
+        #         self.basebytes[2]-=self.accel
         #     event.accept()  # Crucial: tell PyQt we handled this event
-        # elif event.key() == Qt.Key_D:
-        #     if self.basebytes[4]<200:
-        #         self.basebytes[4]+=self.accel
+        # elif event.key() == Qt.Key_Left: #Roll left
+        #     self.go_left()
         #     event.accept()  # Crucial: tell PyQt we handled this event
-        # elif event.key() == Qt.Key_A:
-        #     if self.basebytes[4]>50:
-        #         self.basebytes[4]-=self.accel
+        # elif event.key() == Qt.Key_Right: #Roll right
+        #     self.go_right()
         #     event.accept()  # Crucial: tell PyQt we handled this event
-        elif event.key() == Qt.Key_Z: #Takeoff
-            print("Pressed Take OFF")
-            self.one_touch()
-            event.accept()
-        elif event.key() == Qt.Key_X: #Land
-            self.one_touch()
-            event.accept()  # Crucial: tell PyQt we handled this event
-        # elif event.key() == Qt.Key_C: #Calibrate
-        #     self.basebytes[5] = 128 
+        # # elif event.key() == Qt.Key_W:
+        # #     if self.basebytes[3]<200:
+        # #         self.basebytes[3]+=self.accel
+        # #     event.accept()  # Crucial: tell PyQt we handled this event
+        # # elif event.key() == Qt.Key_S:
+        # #     if self.basebytes[3]>50:
+        # #         self.basebytes[3]-=self.accel
+        # #     event.accept()  # Crucial: tell PyQt we handled this event
+        # # elif event.key() == Qt.Key_D:
+        # #     if self.basebytes[4]<200:
+        # #         self.basebytes[4]+=self.accel
+        # #     event.accept()  # Crucial: tell PyQt we handled this event
+        # # elif event.key() == Qt.Key_A:
+        # #     if self.basebytes[4]>50:
+        # #         self.basebytes[4]-=self.accel
+        # #     event.accept()  # Crucial: tell PyQt we handled this event
+        # elif event.key() == Qt.Key_Z: #Takeoff
+        #     print("Pressed Take OFF")
+        #     self.one_touch()
+        #     event.accept()
+        # elif event.key() == Qt.Key_X: #Land
+        #     self.one_touch()
         #     event.accept()  # Crucial: tell PyQt we handled this event
-        # elif event.key() == Qt.Key_F: #Flip 360
-        #     self.flip = True
-        #     event.accept()  # Crucial: tell PyQt we handled this event
-        # elif event.key() == Qt.Key_H: #Headless
-        #     self.headless = not self.headless
-        #     event.accept()  # Crucial: tell PyQt we handled this event
-        # elif event.key() == Qt.Key_1: #cam 1
-        #     self.cam=1
-        #     event.accept()  # Crucial: tell PyQt we handled this event
-        # elif event.key() == Qt.Key_2: #cam 2
-        #     self.cam=2
-        #     event.accept()  # Crucial: tell PyQt we handled this event
-        else:
-            # For other keys, let the default behavior happen
-            print(event.key())
-            super().keyPressEvent(event)
+        # # elif event.key() == Qt.Key_C: #Calibrate
+        # #     self.basebytes[5] = 128 
+        # #     event.accept()  # Crucial: tell PyQt we handled this event
+        # # elif event.key() == Qt.Key_F: #Flip 360
+        # #     self.flip = True
+        # #     event.accept()  # Crucial: tell PyQt we handled this event
+        # # elif event.key() == Qt.Key_H: #Headless
+        # #     self.headless = not self.headless
+        # #     event.accept()  # Crucial: tell PyQt we handled this event
+        # # elif event.key() == Qt.Key_1: #cam 1
+        # #     self.cam=1
+        # #     event.accept()  # Crucial: tell PyQt we handled this event
+        # # elif event.key() == Qt.Key_2: #cam 2
+        # #     self.cam=2
+        # #     event.accept()  # Crucial: tell PyQt we handled this event
+        # else:
+        #     # For other keys, let the default behavior happen
+        #     print(event.key())
+        #     super().keyPressEvent(event)
 
 
     @pyqtSlot(QPixmap)
@@ -510,6 +591,9 @@ class RTSPViewerApp(QMainWindow):
 
     def on_fwd_button_clicked(self):
         self.go_forward()
+    
+    def on_back_button_clicked(self):
+        self.go_back()
 
     def on_left_button_clicked(self):
         self.go_left()
